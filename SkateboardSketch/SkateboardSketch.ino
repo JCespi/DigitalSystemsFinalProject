@@ -2,6 +2,9 @@
 #include <Adafruit_MPU6050.h> //accelerometer
 #include <Adafruit_Sensor.h>    //accelerometer
 #include <Adafruit_NeoPixel.h>  //LED's
+#include <Adafruit_SSD1306.h> //OLED Display
+#include <SPI.h>                      //OLED Display
+#include <Adafruit_GFX.h>       //OLED Display
 #include <Wire.h>
 //========Macros=============
 //Ultrasonic Range Sensor Pin(s)
@@ -17,11 +20,12 @@
 //OLED Screen Pin(s)
 #define SCREENWIDTH (128)
 #define SCREENHEIGHT (64)
-#define OLED_MOSI (3)
-#define OLED_CLK (4)
-#define OLED_DC (5)
-#define OLED_CS (6)
-#define OLED_RESET(7)
+// Declaration for SSD1306 display connected using software SPI (default case):
+#define OLEDMOSI (3)
+#define OLEDCLK (4)
+#define OLEDDC (5)
+#define OLEDCS (6)
+#define OLEDRESET (7)
 
 //LED Pin(s)
 #define LEDDATA (12)
@@ -35,12 +39,13 @@ bool RangeError;
 Adafruit_MPU6050 Mpu;
 
 //OLED Screen
-Adafruit_SSD1306 Display(SCREENWIDTH, SCREENHEIGHT),
-                                        OLED_MOSI, OLED_CLK, 
-                                        OLED_DC, OLED_RESET, OLED_CS;
+Adafruit_SSD1306 Display(SCREENWIDTH, SCREENHEIGHT,
+                                       OLEDMOSI, OLEDCLK, 
+                                       OLEDDC, OLEDRESET, OLEDCS);
 
 //LED Strip
-Adafruit_NeoPixel PixelStrip(NUMPIXELS, LEDDATA, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel PixelStrip(NUMPIXELS, LEDDATA, 
+                                           NEO_GRB + NEO_KHZ800);
 //=========================
 void setup() {
   //for serial monitor debugging
@@ -102,13 +107,13 @@ void initAccelerometer(){
   if (!Mpu.begin())
     printDebug("Failed to find MPU6050 chip");
 
-  Mpu.setAcceleromterRange(MPU6050_RANGE_16_G);
+  Mpu.setAccelerometerRange(MPU6050_RANGE_16_G);
   Mpu.setGyroRange(MPU6050_RANGE_250_DEG);
   Mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
 }
 
 void initDisplay(){
-  if (!Display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
+  if (!Display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
     printDebug("Failed to start display");
 
   Display.display();
