@@ -42,29 +42,14 @@ void setup() {
   Serial.begin(9600);
 
   //pin set up for ultrasonic range finders
-  pinMode(PORTTRIGGER, OUTPUT);
-  pinMode(STARECHO, INPUT);
-  pinMode(STARRIGGER, OUTPUT);
-  pinMode(PORTECHO, INPUT);
+  initRangeSensors();
 
   //initialize the accelerometer
-  if (!Mpu.begin())
-    printDebug("Failed to find MPU6050 chip");
-
-  Mpu.setAcceleromterRange(MPU6050_RANGE_16_G);
-  Mpu.setGyroRange(MPU6050_RANGE_250_DEG);
-  Mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+  initAccelerometer();
   delay(100);
 
   //initialize the OLED Screen
-  if (!Display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
-    printDebug("Failed to start display");
-
-  Display.display();
-  delay(500);
-  Display.setTextSize(1);
-  Display.setTextColor(WHITE);
-  Display.setRotation(0);
+  initDisplay();
 }
 
 void loop() {
@@ -87,19 +72,39 @@ void loop() {
   Mpu.getEvent(&a, &g, &temp);
 
   //show the sensor event(s)
-  Display.clearDisplay();
-  Display.setCursor(0, 0);
-  Display.println("Accelerometer - m/s^2");
-  Display.print(a.acceleration.x, 1);
-  Display.print(", ");
-  Display.print(a.acceleration.y, 1);
-  Display.print(", ");
-  Display.println(a.acceleration.z, 1);
+  displayDataOnDisplay(a, g, temp);
   //----------------------------------------------------
 }
 //=======Helper Functions=======
 void printDebug(String msg){
   Serial.println("[DEBUG]" + msg);
+}
+
+void initRangeSensors(){
+  pinMode(PORTTRIGGER, OUTPUT);
+  pinMode(STARECHO, INPUT);
+  pinMode(STARRIGGER, OUTPUT);
+  pinMode(PORTECHO, INPUT);
+}
+
+void initAccelerometer(){
+  if (!Mpu.begin())
+    printDebug("Failed to find MPU6050 chip");
+
+  Mpu.setAcceleromterRange(MPU6050_RANGE_16_G);
+  Mpu.setGyroRange(MPU6050_RANGE_250_DEG);
+  Mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+}
+
+void initDisplay(){
+  if (!Display.begin(SSD1306_SWITCHCAPVCC, 0x3C)
+    printDebug("Failed to start display");
+
+  Display.display();
+  delay(500);
+  Display.setTextSize(1);
+  Display.setTextColor(WHITE);
+  Display.setRotation(0);
 }
 
 unsigned int getDistanceToSensor(bool portSide){
@@ -133,5 +138,16 @@ unsigned int getDistanceToSensor(bool portSide){
   delay(500);
   
   return distance;
+}
+
+void displayDataOnDisplay(sensors_event_t a, sensors_event_t g, sensors_event_t temp){
+  Display.clearDisplay();
+  Display.setCursor(0, 0);
+  Display.println("Accelerometer - m/s^2");
+  Display.print(a.acceleration.x, 1);
+  Display.print(", ");
+  Display.print(a.acceleration.y, 1);
+  Display.print(", ");
+  Display.println(a.acceleration.z, 1);
 }
 //=========================
