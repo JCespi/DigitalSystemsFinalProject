@@ -1,6 +1,7 @@
 //========Libraries============
-#include <Adafruit_MPU6050.h>
-#include <Adafruit_Sensor.h>
+#include <Adafruit_MPU6050.h> //accelerometer
+#include <Adafruit_Sensor.h>    //accelerometer
+#include <Adafruit_NeoPixel.h>  //LED's
 #include <Wire.h>
 //========Macros=============
 //Ultrasonic Range Sensor Pin(s)
@@ -24,7 +25,8 @@
 
 //LED Pin(s)
 #define LEDDATA (12)
-#define NUMLEDS (16)
+#define NUMPIXELS (16)
+#define DELAYVAL (500)  //time in ms to pause b/w pixels
 //========Globals=============
 //Ultrasonic range variable(s)
 bool RangeError;
@@ -36,6 +38,9 @@ Adafruit_MPU6050 Mpu;
 Adafruit_SSD1306 Display(SCREENWIDTH, SCREENHEIGHT),
                                         OLED_MOSI, OLED_CLK, 
                                         OLED_DC, OLED_RESET, OLED_CS;
+
+//LED Strip
+Adafruit_NeoPixel PixelStrip(NUMPIXELS, LEDDATA, NEO_GRB + NEO_KHZ800);
 //=========================
 void setup() {
   //for serial monitor debugging
@@ -50,6 +55,9 @@ void setup() {
 
   //initialize the OLED Screen
   initDisplay();
+
+  //initialize the LED strip/Neopixel
+  initPixelStrip();
 }
 
 void loop() {
@@ -72,7 +80,10 @@ void loop() {
   Mpu.getEvent(&a, &g, &temp);
 
   //show the sensor event(s)
-  displayDataOnDisplay(a, g, temp);
+  displayData(a, g, temp);
+  //----------------------------------------------------
+  //write to the pixel strip
+  showPixelResponse();
   //----------------------------------------------------
 }
 //=======Helper Functions=======
@@ -105,6 +116,10 @@ void initDisplay(){
   Display.setTextSize(1);
   Display.setTextColor(WHITE);
   Display.setRotation(0);
+}
+
+void initPixelStrip(){
+  PixelStrip.begin();
 }
 
 unsigned int getDistanceToSensor(bool portSide){
@@ -140,7 +155,7 @@ unsigned int getDistanceToSensor(bool portSide){
   return distance;
 }
 
-void displayDataOnDisplay(sensors_event_t a, sensors_event_t g, sensors_event_t temp){
+void displayData(sensors_event_t a, sensors_event_t g, sensors_event_t temp){
   Display.clearDisplay();
   Display.setCursor(0, 0);
   Display.println("Accelerometer - m/s^2");
@@ -149,5 +164,15 @@ void displayDataOnDisplay(sensors_event_t a, sensors_event_t g, sensors_event_t 
   Display.print(a.acceleration.y, 1);
   Display.print(", ");
   Display.println(a.acceleration.z, 1);
+}
+
+void showPixelResponse(){
+  PixelStrip.clear();
+
+  for (int i=0; i < NUMPIXELS; i++){
+    PixelStrip.setPixelColor(i, PixelStrip.Color(0, 150, 0));
+    PixelStrip.show();
+    delay(DELAYVAL);
+  }
 }
 //=========================
