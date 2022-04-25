@@ -31,6 +31,15 @@
 #define LEDDATA (12)
 #define NUMPIXELS (16)
 #define DELAYVAL (500)  //time in ms to pause b/w pixels
+//constants defining the ranges of LED's on either side
+#define PORTSTART (0)
+#define PORTEND (0)
+#define STARSTART (0)
+#define STAREND (0)
+//realistic distance values (should be 0 - 255) to change LED colors
+#define CLOSEST (10) //should be around 2 inches mapped to raw
+#define STEP (5)      //how much of a difference the value has to have to change color
+#define NSTEPS (9)  //how many colors are available
 //========Globals=============
 //Ultrasonic range variable(s)
 bool RangeError;
@@ -46,6 +55,17 @@ Adafruit_SSD1306 Display(SCREENWIDTH, SCREENHEIGHT,
 //LED Strip
 Adafruit_NeoPixel PixelStrip(NUMPIXELS, LEDDATA, 
                                            NEO_GRB + NEO_KHZ800);
+const unsigned int IntensityMatrix[NSTEPS][3] = {
+  {0, 204, 0},
+  {0, 153, 0},
+  {76, 153, 0},
+  {204, 204, 0},
+  {255, 153, 51},
+  {255, 128, 0},
+  {204, 102, 0},
+  {204, 204, 0},
+  {255, 0, 0}
+};
 //=========================
 void setup() {
   //for serial monitor debugging
@@ -88,7 +108,8 @@ void loop() {
   displayData(a, g, temp);
   //----------------------------------------------------
   //write to the pixel strip
-  showPixelResponse();
+  showPixelResponse(portDist, PORTSTART, PORTEND);
+  showPixelResponse(starDist, STARSTART, STAREND);
   //----------------------------------------------------
 }
 //=======Helper Functions=======
@@ -171,13 +192,23 @@ void displayData(sensors_event_t a, sensors_event_t g, sensors_event_t temp){
   Display.println(a.acceleration.z, 1);
 }
 
-void showPixelResponse(){
+void showPixelResponse(float distance, unsigned int s, unsigned int e){
+  unsigned int red, green, blue;
+  
   PixelStrip.clear();
 
-  for (int i=0; i < NUMPIXELS; i++){
-    PixelStrip.setPixelColor(i, PixelStrip.Color(0, 150, 0));
+  //based on the range in which the distance exists, assign a color
+  for (int k=0; k < NSTEPS; k++){
+    if (distance < CLOSEST + k * STEP){
+      red = IntensityMatrix[k][0];
+      green = IntensityMatrix[k][1];
+      blue = IntensityMatrix[k][2];
+    }
+  }
+
+  for (int pixel=s; pixel < e; pixel++){
+    PixelStrip.setPixelColor(pixel, PixelStrip.Color(red, green, blue));
     PixelStrip.show();
-    delay(DELAYVAL);
   }
 }
 //=========================
