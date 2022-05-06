@@ -76,8 +76,8 @@ void loop() {
     return;
   //----------------------------------------------------
   //write to the pixel strip
-  showPixelResponse(portDist, PORTSTART, PORTEND);
-  showPixelResponse(starDist, STARSTART, STAREND);
+  showPixelResponse(true, portDist, PORTSTART, PORTEND);
+  showPixelResponse(false, starDist, STARSTART, STAREND);
   //----------------------------------------------------
 }
 //=======Helper Functions=======
