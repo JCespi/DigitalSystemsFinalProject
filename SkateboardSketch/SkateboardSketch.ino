@@ -13,58 +13,39 @@
 #define PORTECHO (13)
 #define STARECHO (8)
 
-//Acceleromter + Gyroscope Pin(s)
-#define SCLPIN (A5)
-#define SDAPIN (A4)
-
-//OLED Screen Pin(s)
-#define SCREENWIDTH (128)
-#define SCREENHEIGHT (64)
-// Declaration for SSD1306 display connected using software SPI (default case):
-#define OLEDMOSI (3)
-#define OLEDCLK (4)
-#define OLEDDC (5)
-#define OLEDCS (6)
-#define OLEDRESET (7)
-
 //LED Pin(s)
-#define LEDDATA (12)
+#define STARBOARDDATAPIN (12)
+#define PORTDATAPIN (11)
 #define NUMPIXELS (16)
 #define DELAYVAL (500)  //time in ms to pause b/w pixels
 //constants defining the ranges of LED's on either side
 #define PORTSTART (0)
-#define PORTEND (0)
+#define PORTEND (15)
 #define STARSTART (0)
-#define STAREND (0)
+#define STAREND (15)
 //realistic distance values (should be 0 - 255) to change LED colors
 #define CLOSEST (10) //should be around 2 inches mapped to raw
-#define STEP (5)      //how much of a difference the value has to have to change color
+#define STEP (2)      //how much of a difference the value has to have to change color
 #define NSTEPS (9)  //how many colors are available
 //========Globals=============
 //Ultrasonic range variable(s)
 bool RangeError;
 
-//Acceleromter + Gyroscope variable(s)
-Adafruit_MPU6050 Mpu;
-
-//OLED Screen
-Adafruit_SSD1306 Display(SCREENWIDTH, SCREENHEIGHT,
-                                       OLEDMOSI, OLEDCLK, 
-                                       OLEDDC, OLEDRESET, OLEDCS);
-
 //LED Strip
-Adafruit_NeoPixel PixelStrip(NUMPIXELS, LEDDATA, 
+Adafruit_NeoPixel StarPixelStrip(NUMPIXELS, STARBOARDDATAPIN, 
                                            NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel PortPixelStrip(NUMPIXELS, PORTDATAPIN,
+                                          NEO_GRB + NEO_KHZ800);
 const unsigned int IntensityMatrix[NSTEPS][3] = {
-  {0, 204, 0},
-  {0, 153, 0},
-  {76, 153, 0},
-  {204, 204, 0},
-  {255, 153, 51},
-  {255, 128, 0},
-  {204, 102, 0},
-  {204, 204, 0},
-  {255, 0, 0}
+  {204, 0, 0}, //CLOSEST + 0 * STEP = 10 | dark red
+  {255, 128, 0}, //CLOSEST + 1 * STEP = 12 | red
+  {255, 51, 51},//CLOSEST + 2 * STEP = 14 | light red
+  {255, 128, 0}, //CLOSEST + 3 * STEP = 16 | dark orange
+  {255, 153, 51}, //CLOSEST + 4 * STEP = 18 | orange
+  {255, 178, 102}, //CLOSEST + 5 * STEP = 20  | light orange
+  {0, 153, 0}, //CLOSEST + 6 * STEP = 22 | darkest green
+  {0, 204, 0}, //CLOSEST + 7 * STEP = 24 | darker green
+  {0, 255, 0} //CLOSEST + 8 * STEP = 26 > | green
 };
 //=========================
 void setup() {
@@ -74,15 +55,8 @@ void setup() {
   //pin set up for ultrasonic range finders
   initRangeSensors();
 
-  //initialize the accelerometer
-  initAccelerometer();
-  delay(100);
-
-  //initialize the OLED Screen
-  initDisplay();
-
   //initialize the LED strip/Neopixel
-  initPixelStrip();
+  initStrips();
 }
 
 void loop() {
@@ -101,15 +75,9 @@ void loop() {
   if (RangeError)
     return;
   //----------------------------------------------------
-  //get the new sensor events
-  Mpu.getEvent(&a, &g, &temp);
-
-  //show the sensor event(s)
-  displayData(a, g, temp);
-  //----------------------------------------------------
   //write to the pixel strip
-  showPixelResponse(portDist, PORTSTART, PORTEND);
-  showPixelResponse(starDist, STARSTART, STAREND);
+  showPixelResponse(true, portDist, PORTSTART, PORTEND);
+  showPixelResponse(false, starDist, STARSTART, STAREND);
   //----------------------------------------------------
 }
 //=======Helper Functions=======
@@ -124,28 +92,9 @@ void initRangeSensors(){
   pinMode(PORTECHO, INPUT);
 }
 
-void initAccelerometer(){
-  if (!Mpu.begin())
-    printDebug("Failed to find MPU6050 chip");
-
-  Mpu.setAccelerometerRange(MPU6050_RANGE_16_G);
-  Mpu.setGyroRange(MPU6050_RANGE_250_DEG);
-  Mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
-}
-
-void initDisplay(){
-  if (!Display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
-    printDebug("Failed to start display");
-
-  Display.display();
-  delay(500);
-  Display.setTextSize(1);
-  Display.setTextColor(WHITE);
-  Display.setRotation(0);
-}
-
-void initPixelStrip(){
-  PixelStrip.begin();
+void initStrips(){
+  StarPixelStrip.begin();
+  PortPixelStrip.begin();
 }
 
 unsigned int getDistanceToSensor(bool portSide){
@@ -181,21 +130,13 @@ unsigned int getDistanceToSensor(bool portSide){
   return distance;
 }
 
-void displayData(sensors_event_t a, sensors_event_t g, sensors_event_t temp){
-  Display.clearDisplay();
-  Display.setCursor(0, 0);
-  Display.println("Accelerometer - m/s^2");
-  Display.print(a.acceleration.x, 1);
-  Display.print(", ");
-  Display.print(a.acceleration.y, 1);
-  Display.print(", ");
-  Display.println(a.acceleration.z, 1);
-}
-
-void showPixelResponse(float distance, unsigned int s, unsigned int e){
+void showPixelResponse(bool portSide, float distance, unsigned int s, unsigned int e){
   unsigned int red, green, blue;
-  
-  PixelStrip.clear();
+
+  if (portSide)
+    PortPixelStrip.clear();
+  else
+    StarPixelStrip.clear();
 
   //based on the range in which the distance exists, assign a color
   for (int k=0; k < NSTEPS; k++){
@@ -203,12 +144,18 @@ void showPixelResponse(float distance, unsigned int s, unsigned int e){
       red = IntensityMatrix[k][0];
       green = IntensityMatrix[k][1];
       blue = IntensityMatrix[k][2];
+      break;
     }
   }
 
   for (int pixel=s; pixel < e; pixel++){
-    PixelStrip.setPixelColor(pixel, PixelStrip.Color(red, green, blue));
-    PixelStrip.show();
+    if (portSide){
+      PortPixelStrip.setPixelColor(pixel, PortPixelStrip.Color(red, green, blue));
+      PortPixelStrip.show();
+    } else {
+      StarPixelStrip.setPixelColor(pixel, StarPixelStrip.Color(red, green, blue));
+      StarPixelStrip.show();
+    }
   }
 }
 //=========================
